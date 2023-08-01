@@ -3,9 +3,10 @@
   "version": "0.0.0",
   "description": "This is where my APIs are localized.",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "scripts": {},
   "author": "Théo Dancoisne",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.36.2"
+  }
 }
