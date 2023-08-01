@@ -1,0 +1,11 @@
+{
+  "name": "theoslab_api",
+  "version": "0.0.0",
+  "description": "This is where my APIs are localized.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Théo Dancoisne",
+  "license": "ISC"
+}
