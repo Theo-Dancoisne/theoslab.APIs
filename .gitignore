@@ -1,5 +1,5 @@
 # private files from the private repo
-.credentials_n_tokens/.*
+/.credentials_n_tokens/.*
 
 
 node_modules/
