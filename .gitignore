@@ -1,3 +1,6 @@
+# ignore some private files from another repo
+credentials_n_tokens/*/.*
+
 node_modules/
 /test-results/
 /playwright-report/
