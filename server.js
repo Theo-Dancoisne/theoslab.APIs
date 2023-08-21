@@ -9,6 +9,6 @@ app.listen(port, () => {
 app.get("/", (req, res) => {
     res.send("Hello World!");
 });
-app.get("/gitpull", (req, res) => {
+app.post("/gitpull", (req, res) => {
     console.log(req);
 });
