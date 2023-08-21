@@ -12,6 +12,7 @@ app.get("/", (req, res) => {
     res.send("Hello World!");
 });
 app.post("/gitpull", (req, res) => {
+    const gitpull = require
     res.send("got it");
     console.log(JSON.stringify(req.headers));
     console.log("");

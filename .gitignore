@@ -1,5 +1,5 @@
 # ignore some private files from another repo
-credentials_n_tokens/*/users.json
+private/*/users.json
 
 node_modules/
 /test-results/
