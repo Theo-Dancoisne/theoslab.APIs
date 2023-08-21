@@ -2,11 +2,12 @@
   "name": "theoslab_api",
   "version": "0.0.0",
   "description": "This is where my APIs are localized.",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {},
   "author": "Théo Dancoisne",
   "license": "ISC",
   "dependencies": {
+    "express": "^4.18.2",
     "playwright": "^1.37.0"
   },
   "devDependencies": {
