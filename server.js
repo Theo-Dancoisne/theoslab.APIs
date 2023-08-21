@@ -13,7 +13,7 @@ app.get("/", (req, res) => {
 });
 app.post("/gitpull", (req, res) => {
     res.send("got it");
-    console.log(JSON.stringify(req.head));
+    console.log(JSON.stringify(req.headers));
     console.log("");
     console.log(JSON.stringify(req.body));
     //
