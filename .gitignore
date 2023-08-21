@@ -1,0 +1,11 @@
+# ignore some private files from another repo
+private/*/users.json
+private/.env
+
+node_modules/
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/test-results/
+/playwright-report/
+/playwright/.cache/
