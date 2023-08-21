@@ -10,6 +10,6 @@ app.get("/", (req, res) => {
     res.send("Hello World!");
 });
 app.post("/gitpull", (req, res) => {
+    res.send("got it");
     console.log(req);
-    //
 });
