@@ -1,0 +1,9 @@
+{
+    "day/month/year hour:min": {
+        "start": "same as parent",
+        "end": "day/month/year hour:min",
+        "info1": "",
+        "info2": "",
+        "TeamsUrl": ""
+    }
+}
