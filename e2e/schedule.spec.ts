@@ -43,15 +43,15 @@ test("connect to wigor", async ({ page }) => {
         161.2: null,
         180.6: null,
     };
-    const users = require("../credentials_n_tokens/users.json");
+    // const users = require("../credentials_n_tokens/users.json");
 
     page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D3%252F28%252F2023%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
     // page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D12%252F30%252F2024%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
     // page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D01%252F02%252F2025%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
     // page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D01%252F7%252F2025%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
-    await page.getByLabel("username").fill(users["3sys"].unm);
+    await page.getByLabel("username").fill(users["3sys"].unm);          // for some reasons does not work in playwright library
     await page.getByLabel("password").fill(users["3sys"].pswd);
-    await page.getByRole("button", { name: 'Login' }).click();
+    await page.getByRole("button", { name: "Login" }).click();          // "Login" is valid in playwright test but in playwright library the browser will use the language/location set by the system
 
     await page.waitForLoadState("networkidle");
     // date format in the url: m/d/y
