@@ -1,7 +1,8 @@
 ## An API that recovers data from the Wigor schedule with Playwright
 
 
-Wigor schedule: a private schedule used in my school, written in .NET, and quite broken, I written a little comment about that, see in [schedule.spec.ts](https://github.com/Theo-Dancoisne/theoslab.APIs.wigorSchedule/blob/8e830ac75d2882cba8040aeaef2cf2f0578af8c7/e2e/schedule.spec.ts#L8-L20) .  
+Wigor schedule: a private schedule used in my school, written in .NET, and quite broken, I written a little comment about that, see in schedule.spec .  
+(https://github.com/Theo-Dancoisne/theoslab.APIs.wigorSchedule/blob/8e830ac75d2882cba8040aeaef2cf2f0578af8c7/e2e/schedule.spec.ts#L8-L20)  
 
 As Wigor schedule uses personal login I invite you to read [./private/exemple.users.json](./private/example.users.json) .
 
