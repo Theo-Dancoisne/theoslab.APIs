@@ -1,9 +1,12 @@
 {
-    "day/month/year hour:min": {
+    "dd/mm/yyyy hh:mm": {
         "start": "same as parent",
-        "end": "day/month/year hour:min",
-        "info1": "",
-        "info2": "",
-        "TeamsUrl": ""
+        "end": "dd/mm/yyyy hh:mm",
+        "title": "course name",
+        "link": "Teams call link",
+        "teacher": "teacher's name",
+        "schoolYear": "scholl year",
+        "room": "room number /and floor",
+        "location": "location"
     }
 }

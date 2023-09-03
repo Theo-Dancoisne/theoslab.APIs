@@ -1,9 +1,8 @@
+// I use this file to develop and test the API (index.js) quickly and gradually thanks to the VSCode extension 
+// "Playwright Test for VSCode": https://marketplace.visualstudio.com/items?itemName=ms-playwright.playwright
+// you can ignore it
 import { test, expect } from '@playwright/test';
 
-// var request = new XMLHttpRequest();
-// request.open("GET", requestURL);
-// request.responseType = "json";
-// request.send();
 
 /* why the schedule of wigorservices sucks: */
 // - damn it's a long time to connect to `cas-p.wigorservices.net/cas/login` and then
@@ -21,7 +20,6 @@ import { test, expect } from '@playwright/test';
 
 test("connect to wigor", async ({ page }) => {
     test.slow();
-    const url = "https://ws-edt-cd.wigorservices.net/WebPsDyn.aspx?action=posEDTLMS&amp;serverID=C&amp;Tel=theo.dancoisne&amp;date=03/28/2023&amp;hashURL=6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2";
     const translateMonth = {
         janvier: 1,
         février: 2,
@@ -43,7 +41,8 @@ test("connect to wigor", async ({ page }) => {
         161.2: null,
         180.6: null,
     };
-    // const users = require("../credentials_n_tokens/users.json");
+    var Events = {};
+    const users = require("../../private/wigor_schedule/.users.json");
 
     page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D3%252F28%252F2023%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
     // page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D12%252F30%252F2024%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
@@ -78,20 +77,20 @@ test("connect to wigor", async ({ page }) => {
         const TranslateMonth = translateMonth[day[1]];
         const currentMonth = dayInUrl.getMonth() + 1;
         dateAtPos[dateAtPosKeys[i - 5]] = {
-            d: parseInt(day[0]),
-            m: TranslateMonth,
+            d: day[0].padStart(2, "0"),
+            m: TranslateMonth.toString().padStart(2, "0"),
             y: (() => {
                 if (janDecException) {
                     if (TranslateMonth == 1 && 1 == currentMonth || TranslateMonth == 12 && 12 == currentMonth) {
                         return dayInUrl.getFullYear();
                     } else return dayInUrl.getFullYear() + (TranslateMonth == 1 ? 1 : -1);
                 } else return dayInUrl.getFullYear();
-            })()
+            })(),
         };
     }
     const events = page.locator(".Case");
     if (await events.first().textContent() == "Pas de cours cette semaine") {
-        console.log("nah");
+        return {};
     } else {
         for (let i = 0; i < await events.count() - 1; i++) {
             let content = await events.nth(i).getByRole("table");
@@ -100,19 +99,33 @@ test("connect to wigor", async ({ page }) => {
                 // @ts-ignore
                 style = style.replaceAll(" ", "").split(/[:;]/);
                 // @ts-ignore
-                return style[style.indexOf("left") + 1].slice(0, -1);
+                return parseFloat(Math.fround(style[style.indexOf("left") + 1].slice(0, -1) - 0.12).toFixed(1));    // 0.12 is an offset
             });
             
-            let title = await content.locator(".TCase").first().textContent();
-            let link = await content.locator(".TCase").locator(".Teams").locator("a").first().getAttribute("href");
-            let teacher = (await content.locator(".TCProf").innerText()).split("\n");
-            let schoolYear = teacher.pop();
-            let start = (await content.locator(".TChdeb").textContent()).split(" - ");
-            let end = start.pop();
+            let Start = (await content.locator(".TChdeb").textContent()).split(" - ");
+            let End = Start.pop();
+            let DateStart = dateAtPos[await position].d + "/" + dateAtPos[await position].m + "/" + dateAtPos[await position].y + " " + Start;
+            let DateEnd = dateAtPos[await position].d + "/" + dateAtPos[await position].m + "/" + dateAtPos[await position].y + " " + End;
+            let Title = content.locator(".TCase").first().textContent();
+            let Link = content.locator(".TCase").locator(".Teams").locator("a").first().getAttribute("href");
+            let Teacher = (await content.locator(".TCProf").innerText()).split("\n");
+            let SchoolYear = Teacher.pop();
+
             // text content exemple: "Salle:<>(<>)"
             // my regex sucks because it leaves an empty string at both ends of the array so I added filter()
-            let room = (await content.locator(".TCSalle").textContent()).split(/Salle:|\(|\)/).filter(item => item);
-            let location = room.pop();
+            let Room = (await content.locator(".TCSalle").textContent()).split(/Salle:|\(|\)/).filter(item => item);
+            let Location = Room.pop();
+
+            Events[DateStart] = {
+                start: await DateStart,
+                end: await DateEnd,
+                title: await Title,
+                link: await Link,
+                teacher: await Teacher[0],
+                schoolYear: await SchoolYear,
+                room: await Room[0],
+                location: await Location,
+            }
         }
     }
 });

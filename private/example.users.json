@@ -8,7 +8,7 @@
         "pswd": "password"
     },
 
-    "_comment1": "The file must be renamed '.users.json';",
+    "_comment1": "The file must be renamed into '.users.json';",
     "_comment2": "It can contain as many user credentials as you want ;",
     "_comment3": "The first key (ex: 'user1' or 'user2' here) is used as parameter for the GET request to this API ;",
     "_comment4": "Generally unm refer to your first_name.last_name and pswd to your Microsoft365 school account password ;",
