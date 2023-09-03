@@ -43,10 +43,11 @@ class WigorSchedule {
 
     async Start(username, password, date) {
         /* browser context setup */
-        const browser = await playwright.chromium.launch({
+        /*const browser = await playwright.chromium.launch({
             channel: 'msedge',
             headless: false,
-        });
+        });*/
+        const browser = await playwright.chromium.launch();
         const context = await browser.newContext();
         const page = await context.newPage();
         /*  */
