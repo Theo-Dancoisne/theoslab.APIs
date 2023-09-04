@@ -1,6 +1,6 @@
 {
   "name": "theoslab_api",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "API for wigor schedule",
   "main": "index.js",
   "scripts": {},
@@ -10,6 +10,7 @@
     "playwright": "^1.37.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.37.0"
+    "@playwright/test": "^1.37.0",
+    "release-it": "^16.1.5"
   }
 }

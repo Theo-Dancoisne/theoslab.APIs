@@ -69,7 +69,7 @@ class WigorSchedule {
         // await page.getByRole("button", { name: "Login" }).click();          // "Login" is valid in playwright test but in playwright library the browser will use the language/location set by the system
         await page.locator("[name=submitBtn]").click();
 
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("networkidle", {timeout: 0});
         // date format in the url: m/d/y
         // month is 0 indexed, 0 = january  |  getDay() return number between 0 and 6, 0 = sunday (not monday!)
         const dateInUrl = page.url().match(/date=(.*)&/)[1].split("/").map((item) => parseInt(item));
