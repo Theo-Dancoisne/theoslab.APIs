@@ -1,6 +1,6 @@
 {
   "name": "theoslab_api",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "API for wigor schedule",
   "main": "index.js",
   "scripts": {
