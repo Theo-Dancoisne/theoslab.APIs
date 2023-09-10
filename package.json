@@ -23,7 +23,7 @@
       "requireBranch": "main",
       "requireCommits": true,
       "requireCommitsFail": false,
-      "commitMessage": "Release ${version}"
+      "commitMessage": "Release 🏷${version}"
     },
     "github": {
       "release": true

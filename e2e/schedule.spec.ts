@@ -20,6 +20,7 @@ import { test, expect } from '@playwright/test';
 
 test("connect to wigor", async ({ page }) => {
     test.slow();
+    const packageInfos = require("../package.json");
     const translateMonth = {
         janvier: 1,
         février: 2,
@@ -41,7 +42,13 @@ test("connect to wigor", async ({ page }) => {
         161.2: null,
         180.6: null,
     };
-    var Events = {};
+    var Events = {
+        data: {},
+        infos: {
+            API_version: packageInfos.version,
+            wigorSchedule_version: {},
+        },
+    };
     const users = require("../../private/wigor_schedule/.users.json");
 
     page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D3%252F28%252F2023%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
@@ -53,6 +60,13 @@ test("connect to wigor", async ({ page }) => {
     await page.getByRole("button", { name: "Login" }).click();          // "Login" is valid in playwright test but in playwright library the browser will use the language/location set by the system
 
     await page.waitForLoadState("networkidle");
+
+    // ERROR: handle incorrect credentials
+    if (!page.url().startsWith("https://ws-edt-cd.wigorservices.net/WebPsDyn.aspx")) console.error("Incorrect credentials, the following code will fail.");
+    // ERROR
+
+    Events.infos.wigorSchedule_version = (await page.locator("#DivEntete_Version").textContent()).match(/EDT - (.*)/)[1];
+
     // date format in the url: m/d/y
     // month is 0 indexed, 0 = january  |  getDay() return number between 0 and 6, 0 = sunday (not monday!)
     const dateInUrl = page.url().match(/date=(.*)&/)[1].split("/").map((item) => parseInt(item));
@@ -116,7 +130,7 @@ test("connect to wigor", async ({ page }) => {
             let Room = (await content.locator(".TCSalle").textContent()).split(/Salle:|\(|\)/).filter(item => item);
             let Location = Room.pop();
 
-            Events[DateStart] = {
+            Events.data[DateStart] = {
                 start: await DateStart,
                 end: await DateEnd,
                 title: await Title,
@@ -128,4 +142,5 @@ test("connect to wigor", async ({ page }) => {
             }
         }
     }
+    console.log(Events);
 });

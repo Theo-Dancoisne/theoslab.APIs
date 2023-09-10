@@ -1,5 +1,5 @@
 const playwright = require("playwright");
-
+const packageInfos = require("./package.json");
 
 class WigorSchedule {
     #users;
@@ -24,7 +24,14 @@ class WigorSchedule {
         161.2: null,
         180.6: null,
     };
-    Events = {};
+    Events = {
+        data: {},
+        infos: {
+            API_version: packageInfos.version,
+            wigorSchedule_version: {},
+        },
+        error: {},
+    };
 
     constructor(path = "../private/.users.json") {
         try {
@@ -35,19 +42,36 @@ class WigorSchedule {
     }
 
     GetEventsByProfile(userProfile, date = new Date()) {
-        return this.Start(this.#users[userProfile].unm, this.#users[userProfile].pswd, date);
+        return new Promise((resolve, reject) => {
+            if (!this.#users[userProfile]) reject(`The profile '${userProfile}' does not exist.`, {});
+            this.Start(this.#users[userProfile].unm, this.#users[userProfile].pswd, date).then((data) => {
+                resolve(data);
+            },
+            (err) => {
+                this.Events.error = err;
+                reject(this.Events);
+            });
+        });
     }
     GetEvents(username, password, date = new Date()) {
-        return this.Start(username, password, date);
+        return new Promise((resolve, reject) => {
+            this.Start(username, password, date).then((data) => {
+                resolve(data);
+            },
+            (err) => {
+                this.Events.error = err;
+                reject(this.Events);
+            });
+        });
     }
 
     async Start(username, password, date) {
         /* browser context setup */
-        /*const browser = await playwright.chromium.launch({
+        const browser = await playwright.chromium.launch({
             channel: 'msedge',
             headless: false,
-        });*/
-        const browser = await playwright.chromium.launch();
+        });
+        // const browser = await playwright.chromium.launch();
         const context = await browser.newContext();
         const page = await context.newPage();
         /*  */
@@ -63,90 +87,109 @@ class WigorSchedule {
         
         page.goto(url.join(""));
 
-        // await page.getByLabel("username").fill(username);       // for some reasons does not work outside of playwright test
-        await page.locator("#username").fill(username);
-        await page.getByLabel("password").fill(password);
-        // await page.getByRole("button", { name: "Login" }).click();          // "Login" is valid in playwright test but in playwright library the browser will use the language/location set by the system
-        await page.locator("[name=submitBtn]").click();
-
-        await page.waitForLoadState("networkidle", {timeout: 0});
-        // date format in the url: m/d/y
-        // month is 0 indexed, 0 = january  |  getDay() return number between 0 and 6, 0 = sunday (not monday!)
-        const dateInUrl = page.url().match(/date=(.*)&/)[1].split("/").map((item) => parseInt(item));
-        const dayInUrl = new Date(dateInUrl[2], dateInUrl[0] - 1, dateInUrl[1]);
-
-        // EXCEPTION: the date in the url does not enable us to have the correct year between the 24 December and the 07 January
-        const janDecException = (() => {
-            const firstDayOfWeek = new Date(dayInUrl);
-            firstDayOfWeek.setDate(firstDayOfWeek.getDate() - dayInUrl.getDay() + 1);   // +1 because otherwise it will give you the Sunday of the previous week at 00:00:00 and so the last day will be the Saturday at 00:00:00, no false but not what I want
-            const lastDayOfWeek = new Date(firstDayOfWeek);
-            lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
-
-            return firstDayOfWeek.getFullYear() !== lastDayOfWeek.getFullYear();
-        })();
-        // EXCEPTION
-        
-        const days = page.locator(".Jour");
-        let dateAtPosKeys = Object.keys(this.dateAtPos);
-        // 5 because they load 5 day before and after the current week
-        for (let i = 5; i < await days.count() - 5; i++) {
-            const day = (await days.nth(i).locator(".TCJour").textContent()).toLowerCase().split(" ").slice(1);
-            const TranslateMonth = this.translateMonth[day[1]];
-            const currentMonth = dayInUrl.getMonth() + 1;
-            this.dateAtPos[dateAtPosKeys[i - 5]] = {
-                d: day[0].padStart(2, "0"),
-                m: TranslateMonth.toString().padStart(2, "0"),
-                y: (() => {
-                    if (janDecException) {
-                        if (TranslateMonth == 1 && 1 == currentMonth || TranslateMonth == 12 && 12 == currentMonth) {
-                            return dayInUrl.getFullYear();
-                        } else return dayInUrl.getFullYear() + (TranslateMonth == 1 ? 1 : -1);
-                    } else return dayInUrl.getFullYear();
-                })(),
-            };
-        }
-        const events = page.locator(".Case");
-        if (await events.first().textContent() == "Pas de cours cette semaine") {
-            return {};
-        } else {
-            for (let i = 0; i < await events.count() - 1; i++) {
-                let content = await events.nth(i).getByRole("table");
-                
-                let position = events.nth(i).getAttribute("style").then((style) => {
-                    // @ts-ignore
-                    style = style.replaceAll(" ", "").split(/[:;]/);
-                    // @ts-ignore
-                    return parseFloat(Math.fround(style[style.indexOf("left") + 1].slice(0, -1) - 0.12).toFixed(1));    // 0.12 is an offset
-                });
-                
-                let Start = (await content.locator(".TChdeb").textContent()).split(" - ");
-                let End = Start.pop();
-                let DateStart = this.dateAtPos[await position].d + "/" + this.dateAtPos[await position].m + "/" + this.dateAtPos[await position].y + " " + Start;
-                let DateEnd = this.dateAtPos[await position].d + "/" + this.dateAtPos[await position].m + "/" + this.dateAtPos[await position].y + " " + End;
-                let Title = content.locator(".TCase").first().textContent();
-                let Link = content.locator(".TCase").locator(".Teams").locator("a").first().getAttribute("href");
-                let Teacher = (await content.locator(".TCProf").innerText()).split("\n");
-                let SchoolYear = Teacher.pop();
+        return new Promise(async (resolve, reject) => {
+            // await page.getByLabel("username").fill(username);       // for some reasons does not work outside of playwright test
+            await page.locator("#username").fill(username);
+            await page.getByLabel("password").fill(password);
+            // await page.getByRole("button", { name: "Login" }).click();          // "Login" is valid in playwright test but in playwright library the browser will use the language/location set by the system
+            await page.locator("[name=submitBtn]").click();
     
-                // text content exemple: "Salle:<>(<>)"
-                // my regex sucks because it leaves an empty string at both ends of the array so I added filter()
-                let Room = (await content.locator(".TCSalle").textContent()).split(/Salle:|\(|\)/).filter(item => item);
-                let Location = Room.pop();
-    
-                this.Events[DateStart] = {
-                    start: DateStart,
-                    end: DateEnd,
-                    title: Title,
-                    link: Link,
-                    teacher: Teacher[0],
-                    schoolYear: SchoolYear,
-                    room: Room[0],
-                    location: Location,
-                }
+            await page.waitForLoadState("networkidle", {timeout: 0});
+
+            // ERROR: handle incorrect credentials
+            if (!page.url().startsWith("https://ws-edt-cd.wigorservices.net/WebPsDyn.aspx")) {
+                browser.close();
+                return reject("Incorrect username or password for Wigor Services.\nIf you see this error while using a profile on my web hosted version, please report this issue on https://github.com/Theo-Dancoisne/theoslab.APIs.wigorSchedule/issues/new?title=Nom%20d%27utilisateur%20ou%20mot%20de%20passe%20incorrecte%20dans%20le%20profile&body=Indiquez%20le%20nom%20du%20profile%20que%20vous%20avez%20utilisé..");
             }
-        }
-        await browser.close();
-        return this.Events;
+            // ERROR
+
+            this.Events.infos.wigorSchedule_version = (await page.locator("#DivEntete_Version").textContent()).match(/EDT - (.*)/)[1];
+
+            // date format in the url: m/d/y
+            // month is 0 indexed, 0 = january  |  getDay() return number between 0 and 6, 0 = sunday (not monday!)
+            const dateInUrl = page.url().match(/date=(.*)&/)[1].split("/").map((item) => parseInt(item));
+            const dayInUrl = new Date(dateInUrl[2], dateInUrl[0] - 1, dateInUrl[1]);
+    
+            // EXCEPTION: the date in the url does not enable us to have the correct year between the 24 December and the 07 January
+            const janDecException = (() => {
+                const firstDayOfWeek = new Date(dayInUrl);
+                firstDayOfWeek.setDate(firstDayOfWeek.getDate() - dayInUrl.getDay() + 1);   // +1 because otherwise it will give you the Sunday of the previous week at 00:00:00 and so the last day will be the Saturday at 00:00:00, no false but not what I want
+                const lastDayOfWeek = new Date(firstDayOfWeek);
+                lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
+    
+                return firstDayOfWeek.getFullYear() !== lastDayOfWeek.getFullYear();
+            })();
+            // EXCEPTION
+            
+            try {
+                const days = page.locator(".Jour");
+                let dateAtPosKeys = Object.keys(this.dateAtPos);
+                // 5 because they load 5 day before and after the current week
+                for (let i = 5; i < await days.count() - 5; i++) {
+                    const day = (await days.nth(i).locator(".TCJour").textContent()).toLowerCase().split(" ").slice(1);
+                    const TranslateMonth = this.translateMonth[day[1]];
+                    const currentMonth = dayInUrl.getMonth() + 1;
+                    this.dateAtPos[dateAtPosKeys[i - 5]] = {
+                        d: day[0].padStart(2, "0"),
+                        m: TranslateMonth.toString().padStart(2, "0"),
+                        y: (() => {
+                            if (janDecException) {
+                                if (TranslateMonth == 1 && 1 == currentMonth || TranslateMonth == 12 && 12 == currentMonth) {
+                                    return dayInUrl.getFullYear();
+                                } else return dayInUrl.getFullYear() + (TranslateMonth == 1 ? 1 : -1);
+                            } else return dayInUrl.getFullYear();
+                        })(),
+                    };
+                }
+            } catch (error) {
+                await browser.close();
+                return reject(`Unhandled exception when retrieving days of the week, if you think it should be reported, do so on https://github.com/Theo-Dancoisne/theoslab.APIs.wigorSchedule/issues/new/choose.\nerror:\n${error}`);
+            }
+
+            try {
+                const events = page.locator(".Case");
+                if (await events.first().textContent() !== "Pas de cours cette semaine") {
+                    for (let i = 0; i < await events.count() - 1; i++) {
+                        let content = await events.nth(i).getByRole("table");
+                        
+                        let position = events.nth(i).getAttribute("style").then((style) => {
+                            style = style.replaceAll(" ", "").split(/[:;]/);
+                            return parseFloat(Math.fround(style[style.indexOf("left") + 1].slice(0, -1) - 0.12).toFixed(1));    // 0.12 is an offset
+                        });
+                        
+                        let Start = (await content.locator(".TChdeb").textContent()).split(" - ");
+                        let End = Start.pop();
+                        let DateStart = this.dateAtPos[await position].d + "/" + this.dateAtPos[await position].m + "/" + this.dateAtPos[await position].y + " " + Start;
+                        let DateEnd = this.dateAtPos[await position].d + "/" + this.dateAtPos[await position].m + "/" + this.dateAtPos[await position].y + " " + End;
+                        let Title = content.locator(".TCase").first().textContent();
+                        let Link = content.locator(".TCase").locator(".Teams").locator("a").first().getAttribute("href");
+                        let Teacher = (await content.locator(".TCProf").innerText()).split("\n");
+                        let SchoolYear = Teacher.pop();
+            
+                        // text content exemple: "Salle:<>(<>)"
+                        // my regex sucks because it leaves an empty string at both ends of the array so I added filter()
+                        let Room = (await content.locator(".TCSalle").textContent()).split(/Salle:|\(|\)/).filter(item => item);
+                        let Location = Room.pop();
+            
+                        this.Events.data[DateStart] = {
+                            start: await DateStart,
+                            end: await DateEnd,
+                            title: await Title,
+                            link: await Link,
+                            teacher: await Teacher[0],
+                            schoolYear: await SchoolYear,
+                            room: await Room[0],
+                            location: await Location,
+                        }
+                    }
+                }
+                await browser.close();
+                resolve(this.Events);
+            } catch (error) {
+                await browser.close();
+                return reject(`Unhandled exception when retrieving the events, if you think it should be reported, do so on https://github.com/Theo-Dancoisne/theoslab.APIs.wigorSchedule/issues/new/choose.\nerror:\n${error}`);
+            }
+        });
     }
 }
 
