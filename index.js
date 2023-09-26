@@ -67,11 +67,11 @@ class WigorSchedule {
 
     async Start(username, password, date) {
         /* browser context setup */
-        const browser = await playwright.chromium.launch({
+        /*const browser = await playwright.chromium.launch({          // dev, headed
             channel: 'msedge',
             headless: false,
-        });
-        // const browser = await playwright.chromium.launch();
+        });*/
+        const browser = await playwright.chromium.launch();      // prod, headless
         const context = await browser.newContext();
         const page = await context.newPage();
         /*  */
@@ -143,7 +143,7 @@ class WigorSchedule {
                 }
             } catch (error) {
                 await browser.close();
-                return reject(`Unhandled exception when retrieving days of the week, if you think it should be reported, do so on https://github.com/Theo-Dancoisne/theoslab.APIs.wigorSchedule/issues/new/choose.\nerror:\n${error}`);
+                return reject(`Unhandled exception when retrieving days of the week, if you think it should be reported, do so on https://github.com/Theo-Dancoisne/theoslab.APIs.wigorSchedule/issues/new/choose.\nerror: \n ${error}`);
             }
 
             try {
