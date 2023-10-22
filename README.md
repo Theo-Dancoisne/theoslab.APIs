@@ -2,6 +2,7 @@
 
 
 Wigor schedule: a private schedule used in my school, written in .NET, and quite broken, I written a little comment about that, see in schedule.spec .  
+(https://github.com/Theo-Dancoisne/theoslab.APIs.wigorSchedule/blob/main/e2e/schedule.spec.ts#L7-L18)  
 
 As Wigor schedule uses personal login I invite you to read [./private/exemple.users.json](./private/example.users.json) .
 
