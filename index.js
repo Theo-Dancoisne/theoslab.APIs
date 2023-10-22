@@ -28,10 +28,17 @@ class WigorSchedule {
         data: {},
         infos: {
             API_version: packageInfos.version,
-            wigorSchedule_version: {},
+            wigorSchedule_version: null,
+            request_parameters: {
+                method: null,
+                timestamp: null,
+                profile_name: null,
+                user_name: null,
+            },
         },
         error: {},
     };
+    EventsCopy = JSON.parse(JSON.stringify(this.Events));
 
     constructor(path = "../private/.users.json") {
         try {
@@ -45,6 +52,8 @@ class WigorSchedule {
         return new Promise((resolve, reject) => {
             if (!this.#users[userProfile]) reject(`The profile '${userProfile}' does not exist.`, {});
             this.Start(this.#users[userProfile].unm, this.#users[userProfile].pswd, date).then((data) => {
+                data.infos.request_parameters.method = "GET";
+                data.infos.request_parameters.profile_name = userProfile;
                 resolve(data);
             },
             (err) => {
@@ -56,6 +65,8 @@ class WigorSchedule {
     GetEvents(username, password, date = new Date()) {
         return new Promise((resolve, reject) => {
             this.Start(username, password, date).then((data) => {
+                data.infos.request_parameters.method = "POST";
+                data.infos.request_parameters.user_name = username;
                 resolve(data);
             },
             (err) => {
@@ -65,17 +76,30 @@ class WigorSchedule {
         });
     }
 
+    ClearEventsproperty() {
+        this.Events = JSON.parse(JSON.stringify(this.EventsCopy));
+    }
+
+    async Selector_exists(selector, timeout=5000) {
+        try {
+            return await selector.waitFor({ timeout: timeout, state: 'attached'});
+        } catch (error) {
+            return false;
+        }
+    }
+
     async Start(username, password, date) {
         /* browser context setup */
-        /*const browser = await playwright.chromium.launch({          // dev, headed
+        const browser = await playwright.chromium.launch({          // dev, headed
             channel: 'msedge',
             headless: false,
-        });*/
-        const browser = await playwright.chromium.launch();      // prod, headless
+        });
+        // const browser = await playwright.chromium.launch();      // prod, headless
         const context = await browser.newContext();
         const page = await context.newPage();
         /*  */
         
+        this.Events.infos.request_parameters.timestamp = date.getTime();
         // https://ws-edt-cd.wigorservices.net/WebPsDyn.aspx?action=posEDTLMS&serverID=C&Tel=theo.dancoisne&date=02/28/2023&hashURL=6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2
         let url = [
             "https://ws-edt-cd.wigorservices.net/WebPsDyn.aspx?action=posEDTLMS&serverID=C&Tel=",
@@ -162,7 +186,11 @@ class WigorSchedule {
                         let DateStart = this.dateAtPos[await position].d + "/" + this.dateAtPos[await position].m + "/" + this.dateAtPos[await position].y + " " + Start;
                         let DateEnd = this.dateAtPos[await position].d + "/" + this.dateAtPos[await position].m + "/" + this.dateAtPos[await position].y + " " + End;
                         let Title = content.locator(".TCase").first().textContent();
-                        let Link = content.locator(".TCase").locator(".Teams").locator("a").first().getAttribute("href");
+
+                        let Link = content.locator(".TCase").locator(".Teams").locator("a");
+                        if (await this.Selector_exists(Link, 1000)) Link = Link.first().getAttribute("href");
+                        else Link = "";
+
                         let Teacher = (await content.locator(".TCProf").innerText()).split("\n");
                         let SchoolYear = Teacher.pop();
             

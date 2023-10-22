@@ -1,22 +1,29 @@
 // I use this file to develop and test the API (index.js) quickly and gradually thanks to the VSCode extension 
 // "Playwright Test for VSCode": https://marketplace.visualstudio.com/items?itemName=ms-playwright.playwright
 // you can ignore it
-import { test, expect } from '@playwright/test';
+import { test, expect, Page, Frame, Locator } from '@playwright/test';
 
 
-/* why the schedule of wigorservices sucks: */
+/* why I (and people) hate the schedule of wigorservices: */
 // - damn it's a long time to connect to `cas-p.wigorservices.net/cas/login` and then
 //   to load the desired page on `ws-edt-cd.wigorservices.net/WebPsDyn.aspx`;
 // - depending on the domain, you will comme across other versions of site which are still hosted and online ¯\_(°-°)_/¯ ;
 // - the ?hash= url can sometimes lead you to the "Erreur de paramètres" (error of parameters) page ;
 // - if not, you have still ~5% chances of this even if the url is correct, re-send the request without changing 
 //   anything and you have still ~5% chances ;
-// - class, id, ...'s name are written in french, so I use a matrix ;
 // - events are not children of days, so I refer to the left position of the style
 //   (which is the same to both types) with another matrix ;
 // - it loads the header of the days of the week after and before the desired date, but not the events,
 //   I don't understand the purpose of this but I have to uncount the 5 days before and after in my locator ;
 /*  */
+
+async function selector_exists(selector, timeout=5000) {
+    try {
+        return await selector.waitFor({ timeout: timeout, state: 'attached'});
+    } catch (error) {
+        return false;
+    }
+}
 
 test("connect to wigor", async ({ page }) => {
     test.slow();
@@ -51,7 +58,8 @@ test("connect to wigor", async ({ page }) => {
     };
     const users = require("../../private/wigor_schedule/.users.json");
 
-    page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D3%252F28%252F2023%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
+    page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D10%252F23%252F2023%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
+    // page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D3%252F28%252F2023%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
     // page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D12%252F30%252F2024%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
     // page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D01%252F02%252F2025%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
     // page.goto("https://cas-p.wigorservices.net/cas/login?service=https%3A%2F%2Fws-edt-cd.wigorservices.net%2FWebPsDyn.aspx%3Faction%3DposEDTLMS%26serverID%3DC%26Tel%3Dtheo.dancoisne%26date%3D01%252F7%252F2025%26hashURL%3D6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2");
@@ -121,7 +129,11 @@ test("connect to wigor", async ({ page }) => {
             let DateStart = dateAtPos[await position].d + "/" + dateAtPos[await position].m + "/" + dateAtPos[await position].y + " " + Start;
             let DateEnd = dateAtPos[await position].d + "/" + dateAtPos[await position].m + "/" + dateAtPos[await position].y + " " + End;
             let Title = content.locator(".TCase").first().textContent();
-            let Link = content.locator(".TCase").locator(".Teams").locator("a").first().getAttribute("href");
+
+            let Link = content.locator(".TCase").locator(".Teams").locator("a");
+            if (await selector_exists(Link, 1000)) Link = Link.first().getAttribute("href");
+            else Link = "";
+
             let Teacher = (await content.locator(".TCProf").innerText()).split("\n");
             let SchoolYear = Teacher.pop();
 
