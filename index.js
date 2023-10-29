@@ -80,9 +80,9 @@ class WigorSchedule {
         this.Events = JSON.parse(JSON.stringify(this.EventsCopy));
     }
 
-    async Selector_exists(selector, timeout=5000) {
+    async Selector_visible(selector, timeout=5000) {
         try {
-            return await selector.waitFor({ timeout: timeout, state: 'attached'});
+            return await selector.isVisible({ timeout: timeout});
         } catch (error) {
             return false;
         }
@@ -90,11 +90,11 @@ class WigorSchedule {
 
     async Start(username, password, date) {
         /* browser context setup */
-        /*const browser = await playwright.chromium.launch({          // dev, headed
+        const browser = await playwright.chromium.launch({          // dev, headed
             channel: 'msedge',
             headless: false,
-        });*/
-        const browser = await playwright.chromium.launch();      // prod, headless
+        });
+        // const browser = await playwright.chromium.launch();      // prod, headless
         const context = await browser.newContext();
         const page = await context.newPage();
         /*  */
@@ -127,7 +127,14 @@ class WigorSchedule {
             }
             // ERROR
 
-            this.Events.infos.wigorSchedule_version = (await page.locator("#DivEntete_Version").textContent()).match(/EDT - (.*)/)[1];
+            // ERROR: wrong page after redirection by login(success) page (e.g: .NET error page) OR Unhandled Exception!
+            let version = page.locator("#DivEntete_Version");
+            if (await this.Selector_visible(version)) this.Events.infos.wigorSchedule_version = (await version.textContent()).match(/EDT - (.*)/)[1];
+            else {
+                browser.close();
+                return reject("Wigor schedule version not found, this means that the login page redirected to the wrong page (e.g: a .NET error page of the app) or that the schedule page has been updated.\nTry once or twice before reporting the issue.");
+            }
+            // ERROR
 
             // date format in the url: m/d/y
             // month is 0 indexed, 0 = january  |  getDay() return number between 0 and 6, 0 = sunday (not monday!)
@@ -187,8 +194,8 @@ class WigorSchedule {
                         let DateEnd = this.dateAtPos[await position].d + "/" + this.dateAtPos[await position].m + "/" + this.dateAtPos[await position].y + " " + End;
                         let Title = content.locator(".TCase").first().textContent();
 
-                        let Link = content.locator(".TCase").locator(".Teams").locator("a");
-                        if (await this.Selector_exists(Link, 1000)) Link = Link.first().getAttribute("href");
+                        let Link = content.locator(".TCase").locator(".Teams").locator("a").first();
+                        if (await this.Selector_visible(Link, 1000)) Link = Link.getAttribute("href");
                         else Link = "";
 
                         let Teacher = (await content.locator(".TCProf").innerText()).split("\n");
