@@ -127,7 +127,7 @@ class WigorSchedule {
     CaptureError(datetime) {
         return new Promise((resolve, reject) => {
             this.#page.screenshot({
-                path: `theoslab.APIs.wigorSchedule/logs/screenshots/error_${datetime.getDate()}-${datetime.getMonth() + 1}-${datetime.getFullYear()}_${datetime.getHours()}-${datetime.getMinutes()}-${datetime.getMilliseconds()}-.png`,
+                path: `theoslab.APIs.wigorSchedule/logs/screenshots/error_${datetime.getDate()}-${datetime.getMonth() + 1}-${datetime.getFullYear()}_${datetime.getHours()}-${datetime.getMinutes()}-${datetime.getMilliseconds()}.png`,
                 timeout: 5000
             }).then(() => {
                 return resolve();
