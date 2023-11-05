@@ -5,3 +5,7 @@ node_modules/
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+logs/screenshots/*
+logs/*
+!/logs/screenshots

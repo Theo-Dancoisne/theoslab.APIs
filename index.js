@@ -3,6 +3,10 @@ const packageInfos = require("./package.json");
 
 class WigorSchedule {
     #users;
+    #browser;
+    #context;
+    #page;
+    headless = true;
     translateMonth = {
         janvier: 1,
         février: 2,
@@ -40,37 +44,69 @@ class WigorSchedule {
     };
     EventsCopy = JSON.parse(JSON.stringify(this.Events));
 
-    constructor(path = "../private/.users.json") {
+    constructor(path = "../private/.users.json", headless = true) {
         try {
             this.#users = require(path);
+            this.headless = headless;
         } catch (error) {
-            throw new Error(error + "\nYou may need to check out at ./private/example.users.json .\n");
+            throw new Error(`${error} \nYou may need to check out at ./private/example.users.json .\n`);
         }
     }
 
+    /* browser context setup */
+    async SetBrower() {
+        try {
+            if (this.headless) {
+                this.#browser = await playwright.chromium.launch();      // prod, headless
+            }
+            else {
+                this.#browser = await playwright.chromium.launch({       // dev, headed
+                    channel: 'msedge',
+                    headless: false,
+                });
+            }
+            this.#context = await this.#browser.newContext();
+            this.#page = await this.#context.newPage();
+        }
+        catch(error) {
+            throw new Error(`${error} \nWhile setting up the Playwright browser, did you forget to install the correct one ? Headless was set on ${headless}, is that what you intended ?`);
+        }
+    }
+    /*  */
+
     GetEventsByProfile(userProfile, date = new Date()) {
+        this.Events.infos.request_parameters.method = "GET";
+        this.Events.infos.request_parameters.profile_name = userProfile;
         return new Promise((resolve, reject) => {
-            if (!this.#users[userProfile]) reject(`The profile '${userProfile}' does not exist.`, {});
-            this.Start(this.#users[userProfile].unm, this.#users[userProfile].pswd, date).then((data) => {
-                data.infos.request_parameters.method = "GET";
-                data.infos.request_parameters.profile_name = userProfile;
-                resolve(data);
+            if (!this.#users[userProfile]) reject(`The profile '${userProfile}' does not exist.`);
+            this.Start(this.#users[userProfile].unm, this.#users[userProfile].pswd, date).then(() => {
+                this.#browser.close();
+                resolve(this.Events);
             },
             (err) => {
-                this.Events.error = err;
+                let datetime = new Date();
+                this.CaptureError(datetime)
+                .catch((error) => console.log(error))
+                .then(() => this.#browser.close());
+                this.Events.error = `[${datetime.toUTCString()}] ${err}`;
                 reject(this.Events);
             });
         });
     }
     GetEvents(username, password, date = new Date()) {
+        this.Events.infos.request_parameters.method = "POST";
+        this.Events.infos.request_parameters.user_name = username;
         return new Promise((resolve, reject) => {
-            this.Start(username, password, date).then((data) => {
-                data.infos.request_parameters.method = "POST";
-                data.infos.request_parameters.user_name = username;
-                resolve(data);
+            this.Start(username, password, date).then(() => {
+                this.#browser.close();
+                resolve(this.Events);
             },
             (err) => {
-                this.Events.error = err;
+                let datetime = new Date();
+                this.CaptureError(datetime)
+                .catch((error) => console.log(error))
+                .then(() => this.#browser.close());
+                this.Events.error = `[${datetime.toUTCString()}] ${err}`;
                 reject(this.Events);
             });
         });
@@ -88,16 +124,25 @@ class WigorSchedule {
         }
     }
 
+    CaptureError(datetime) {
+        return new Promise((resolve, reject) => {
+            this.#page.screenshot({
+                path: `theoslab.APIs.wigorSchedule/logs/screenshots/error_${datetime.getDate()}-${datetime.getMonth() + 1}-${datetime.getFullYear()}_${datetime.getHours()}-${datetime.getMinutes()}-${datetime.getMilliseconds()}-.png`,
+                timeout: 5000
+            }).then(() => {
+                return resolve();
+            }
+            ,(error) => {
+                return reject(`Error while taking screenshot:\n${error}`);
+            });
+        });
+    }
+
     async Start(username, password, date) {
-        /* browser context setup */
-        /*const browser = await playwright.chromium.launch({          // dev, headed
-            channel: 'msedge',
-            headless: false,
-        });*/
-        const browser = await playwright.chromium.launch();      // prod, headless
-        const context = await browser.newContext();
-        const page = await context.newPage();
-        /*  */
+        await this.SetBrower().then(() => {},
+        (err) => {
+            return reject(err);
+        });
         
         this.Events.infos.request_parameters.timestamp = date.getTime();
         // https://ws-edt-cd.wigorservices.net/WebPsDyn.aspx?action=posEDTLMS&serverID=C&Tel=theo.dancoisne&date=02/28/2023&hashURL=6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2
@@ -109,36 +154,35 @@ class WigorSchedule {
             "&hashURL=6A322522A712EBD110260D1D505E28F595156D9701C0D240D268F8F329899514AFCCC45DAE4C54C0329C0765F10306871431A8FDA76A5C561114CD87028866D2"
         ]
         
-        page.goto(url.join(""));
+        this.#page.goto(url.join(""));
 
         return new Promise(async (resolve, reject) => {
-            // await page.getByLabel("username").fill(username);       // for some reasons does not work outside of playwright test
-            await page.locator("#username").fill(username);
-            await page.getByLabel("password").fill(password);
-            // await page.getByRole("button", { name: "Login" }).click();          // "Login" is valid in playwright test but in playwright library the browser will use the language/location set by the system
-            await page.locator("[name=submitBtn]").click();
+            // await this.#page.getByLabel("username").fill(username);       // for some reasons does not work outside of playwright test
+            await this.#page.locator("#username").fill(username);
+            await this.#page.getByLabel("password").fill(password);
+            // await this.#page.getByRole("button", { name: "Login" }).click();          // "Login" is valid in playwright test but in playwright library the browser will use the language/location set by the system
+            await this.#page.locator("[name=submitBtn]").click();
     
-            await page.waitForLoadState("networkidle", {timeout: 0});
+            await this.#page.waitForLoadState("networkidle", {timeout: 0});
 
             // ERROR: handle incorrect credentials
-            if (!page.url().startsWith("https://ws-edt-cd.wigorservices.net/WebPsDyn.aspx")) {
-                browser.close();
+            if (!this.#page.url().startsWith("https://ws-edt-cd.wigorservices.net/WebPsDyn.aspx")) {
                 return reject("Incorrect username or password for Wigor Services.\nIf you see this error while using a profile on my web hosted version, please report this issue on https://github.com/Theo-Dancoisne/theoslab.APIs.wigorSchedule/issues/new?title=Nom%20d%27utilisateur%20ou%20mot%20de%20passe%20incorrecte%20dans%20le%20profile&body=Indiquez%20le%20nom%20du%20profile%20que%20vous%20avez%20utilisé..");
             }
             // ERROR
 
             // ERROR: wrong page after redirection by login(success) page (e.g: .NET error page) OR Unhandled Exception!
-            let version = page.locator("#DivEntete_Version");
+            let version = this.#page.locator("#DivEntete_Version");
             if (await this.Selector_visible(version)) this.Events.infos.wigorSchedule_version = (await version.textContent()).match(/EDT - (.*)/)[1];
             else {
-                browser.close();
                 return reject("Wigor schedule version not found, this means that the login page redirected to the wrong page (e.g: a .NET error page of the app) or that the schedule page has been updated.\nTry once or twice before reporting the issue.");
             }
             // ERROR
 
+            // return reject("this a test");
             // date format in the url: m/d/y
             // month is 0 indexed, 0 = january  |  getDay() return number between 0 and 6, 0 = sunday (not monday!)
-            const dateInUrl = page.url().match(/date=(.*)&/)[1].split("/").map((item) => parseInt(item));
+            const dateInUrl = this.#page.url().match(/date=(.*)&/)[1].split("/").map((item) => parseInt(item));
             const dayInUrl = new Date(dateInUrl[2], dateInUrl[0] - 1, dateInUrl[1]);
     
             // EXCEPTION: the date in the url does not enable us to have the correct year between the 24 December and the 07 January
@@ -153,7 +197,7 @@ class WigorSchedule {
             // EXCEPTION
             
             try {
-                const days = page.locator(".Jour");
+                const days = this.#page.locator(".Jour");
                 let dateAtPosKeys = Object.keys(this.dateAtPos);
                 // 5 because they load 5 day before and after the current week
                 for (let i = 5; i < await days.count() - 5; i++) {
@@ -173,12 +217,11 @@ class WigorSchedule {
                     };
                 }
             } catch (error) {
-                await browser.close();
                 return reject(`Unhandled exception when retrieving days of the week, if you think it should be reported, do so on https://github.com/Theo-Dancoisne/theoslab.APIs.wigorSchedule/issues/new/choose.\nerror: \n ${error}`);
             }
 
             try {
-                const events = page.locator(".Case");
+                const events = this.#page.locator(".Case");
                 if (await events.first().textContent() !== "Pas de cours cette semaine") {
                     for (let i = 0; i < await events.count() - 1; i++) {
                         let content = await events.nth(i).getByRole("table");
@@ -218,10 +261,8 @@ class WigorSchedule {
                         }
                     }
                 }
-                await browser.close();
-                resolve(this.Events);
+                return resolve();
             } catch (error) {
-                await browser.close();
                 return reject(`Unhandled exception when retrieving the events, if you think it should be reported, do so on https://github.com/Theo-Dancoisne/theoslab.APIs.wigorSchedule/issues/new/choose.\nerror:\n${error}`);
             }
         });
