@@ -157,11 +157,18 @@ class WigorSchedule {
         this.#page.goto(url.join(""));
 
         return new Promise(async (resolve, reject) => {
+            
             // await this.#page.getByLabel("username").fill(username);       // for some reasons does not work outside of playwright test
             await this.#page.locator("#username").fill(username);
             await this.#page.getByLabel("password").fill(password);
             // await this.#page.getByRole("button", { name: "Login" }).click();          // "Login" is valid in playwright test but in playwright library the browser will use the language/location set by the system
-            await this.#page.locator("[name=submitBtn]").click();
+            let submitBtn = await this.#page.locator("[name=submitBtn]");
+            // ERROR: wrong page when going to the URL (e.g: .NET error page) OR Unhandled Exception!
+            if (!await this.Selector_visible(submitBtn, 10000)) {
+                return reject("Submit button on Wigor Services login page not found, this means the URL loaded the wrong page (e.g: a .NET error page of the app) or that the login page has been updated since.\nTry once or twice before reporting the issue.");
+            }
+            // ERROR
+            await submitBtn.click();
     
             await this.#page.waitForLoadState("networkidle", {timeout: 0});
 
@@ -173,13 +180,12 @@ class WigorSchedule {
 
             // ERROR: wrong page after redirection by login(success) page (e.g: .NET error page) OR Unhandled Exception!
             let version = this.#page.locator("#DivEntete_Version");
-            if (await this.Selector_visible(version)) this.Events.infos.wigorSchedule_version = (await version.textContent()).match(/EDT - (.*)/)[1];
-            else {
-                return reject("Wigor schedule version not found, this means that the login page redirected to the wrong page (e.g: a .NET error page of the app) or that the schedule page has been updated.\nTry once or twice before reporting the issue.");
+            if (!await this.Selector_visible(version)) {
+                return reject("Wigor schedule version not found, this means that the login page redirected to the wrong page (e.g: a .NET error page of the app) or that the schedule page has been updated since.\nTry once or twice before reporting the issue.");
             }
             // ERROR
+            this.Events.infos.wigorSchedule_version = (await version.textContent()).match(/EDT - (.*)/)[1];
 
-            // return reject("this a test");
             // date format in the url: m/d/y
             // month is 0 indexed, 0 = january  |  getDay() return number between 0 and 6, 0 = sunday (not monday!)
             const dateInUrl = this.#page.url().match(/date=(.*)&/)[1].split("/").map((item) => parseInt(item));
@@ -188,7 +194,7 @@ class WigorSchedule {
             // EXCEPTION: the date in the url does not enable us to have the correct year between the 24 December and the 07 January
             const janDecException = (() => {
                 const firstDayOfWeek = new Date(dayInUrl);
-                firstDayOfWeek.setDate(firstDayOfWeek.getDate() - dayInUrl.getDay() + 1);   // +1 because otherwise it will give you the Sunday of the previous week at 00:00:00 and so the last day will be the Saturday at 00:00:00, no false but not what I want
+                firstDayOfWeek.setDate(firstDayOfWeek.getDate() - dayInUrl.getDay() + 1);   // +1 because otherwise it will give you the Sunday of the previous week at 00:00:00 and so the last day will be the Saturday at 00:00:00, not false but not what I want
                 const lastDayOfWeek = new Date(firstDayOfWeek);
                 lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
     
